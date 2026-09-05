@@ -1,0 +1,188 @@
+import sys
+from PyQt6.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout,
+                             QLabel, QPushButton, QMessageBox, QCheckBox, QHBoxLayout, QLineEdit)
+from PyQt6.QtCore import Qt
+from PyQt6.QtGui import QAction
+
+
+class MainWindow(QMainWindow):
+    def __init__(self):
+        super().__init__()
+
+        # Флаги состояний
+        self.is_dark_theme = True  # По умолчанию стоит темная тема
+
+        # Настройки главного окна
+        self.setWindowTitle("Industrial Hello World Application")
+        self.resize(450, 460)
+
+        # Создаем центральный виджет и вертикальный слой
+        central_widget = QWidget()
+        self.setCentralWidget(central_widget)
+
+        self.main_layout = QVBoxLayout(central_widget)
+        self.main_layout.setContentsMargins(30, 30, 30, 20)
+        self.main_layout.setSpacing(15)
+
+        # 1. Текстовое поле (Информационное табло)
+        self.label = QLabel("Введите имя ниже")
+        self.label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.main_layout.addWidget(self.label)
+
+        # 2. Строчка для ввода имени (Новый элемент)
+        self.name_input = QLineEdit()
+        self.name_input.setPlaceholderText("Введите ваше имя здесь...")
+        self.name_input.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.main_layout.addWidget(self.name_input)
+
+        # 3. Кнопка "Сгенерировать приветствие"
+        self.btn = QPushButton("Сгенерировать приветствие")
+        self.btn.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.btn.clicked.connect(self.generate_greeting)  # Подключаем к новой функции
+        self.main_layout.addWidget(self.btn)
+
+        # 4. Блок с тумблером смены темы в правом нижнем углу
+        bottom_layout = QHBoxLayout()
+        bottom_layout.addStretch()
+
+        self.theme_switch = QCheckBox()
+        self.theme_switch.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.theme_switch.stateChanged.connect(self.change_theme)
+
+        self.switch_label = QLabel("Тёмная тема")
+        self.switch_label.setStyleSheet("font-size: 13px; font-weight: bold; font-family: 'Segoe UI';")
+
+        bottom_layout.addWidget(self.switch_label)
+        bottom_layout.addWidget(self.theme_switch)
+        self.main_layout.addLayout(bottom_layout)
+
+        # Инициализация меню и стилей
+        self.init_menu()
+        self.apply_theme_styles()
+        self.statusBar().showMessage("Приложение готово к работе")
+
+    def init_menu(self):
+        """Создание верхнего меню"""
+        menu_bar = self.menuBar()
+
+        # Меню Файл
+        file_menu = menu_bar.addMenu("Файл")
+        exit_action = QAction("Выход", self)
+        exit_action.setStatusTip("Закрыть приложение")
+        exit_action.triggered.connect(self.close)
+        file_menu.addAction(exit_action)
+
+        # Меню Помощь
+        help_menu = menu_bar.addMenu("Помощь")
+        about_action = QAction("О программе", self)
+        about_action.setStatusTip("Показать информацию о программе")
+        about_action.triggered.connect(self.show_about_dialog)
+        help_menu.addAction(about_action)
+
+    def generate_greeting(self):
+        """Функция генерации текста на основе ввода пользователя"""
+        # Получаем текст из строки ввода и убираем лишние пробелы по краям
+        user_name = self.name_input.text().strip()
+
+        if user_name:
+            # Если имя введено — генерируем красивое приветствие
+            self.label.setText(f"Привет, {user_name}!")
+            self.statusBar().showMessage(f"Сгенерировано приветствие для {user_name}")
+        else:
+            # Если поле пустое — выводим дефолтный текст
+            self.label.setText("Musor Drop")
+            self.statusBar().showMessage("Поле ввода пустое. Выведен стандартный текст")
+
+    def change_theme(self, state):
+        """Слушатель переключателя тем"""
+        if state == 2:  # Checked
+            self.is_dark_theme = False
+            self.switch_label.setText("Светлая тема")
+        else:
+            self.is_dark_theme = True
+            self.switch_label.setText("Тёмная тема")
+
+        self.apply_theme_styles()
+        self.statusBar().showMessage("Тема оформления успешно изменена")
+
+    def apply_theme_styles(self):
+        """Глобальное применение стилей для темной и светлой тем"""
+        if self.is_dark_theme:
+            self.setStyleSheet("""
+                QMainWindow { background-color: #121214; }
+                QMenuBar { background-color: #1a1a1e; color: #e1e1e6; font-family: 'Segoe UI'; }
+                QMenuBar::item:selected { background-color: #29292e; color: #00adb5; }
+                QMenu { background-color: #1a1a1e; color: #e1e1e6; border: 1px solid #29292e; }
+                QMenu::item:selected { background-color: #00adb5; color: #ffffff; }
+                QStatusBar { background-color: #1a1a1e; color: #87878d; font-size: 11px; }
+            """)
+            self.label.setStyleSheet("""
+                QLabel { background-color: #1a1a1e; border: 2px solid #29292e; border-radius: 12px;
+                         font-size: 22px; font-weight: bold; color: #00adb5; min-height: 80px; font-family: 'Segoe UI'; }
+            """)
+            # Стиль для строки ввода в ТЕМНОЙ теме
+            self.name_input.setStyleSheet("""
+                QLineEdit { background-color: #1a1a1e; color: #ffffff; border: 2px solid #29292e; 
+                            border-radius: 8px; padding: 8px; font-size: 15px; font-family: 'Segoe UI'; }
+                QLineEdit:focus { border: 2px solid #00adb5; }
+            """)
+            self.btn.setStyleSheet("""
+                QPushButton { background-color: #00adb5; color: #ffffff; border: none; border-radius: 10px;
+                             font-size: 16px; font-weight: bold; min-height: 50px; font-family: 'Segoe UI'; }
+                QPushButton:hover { background-color: #00f5ff; color: #121214; }
+                QPushButton:pressed { background-color: #008c95; }
+            """)
+            self.theme_switch.setStyleSheet("""
+                QCheckBox::indicator { width: 44px; height: 24px; }
+                QCheckBox::indicator:unchecked { image: url(''); background-color: #29292e; border-radius: 12px; border: 2px solid #3e3e44; }
+                QCheckBox::indicator:checked { image: url(''); background-color: #00adb5; border-radius: 12px; border: 2px solid #00f5ff; }
+            """)
+            self.switch_label.setStyleSheet(
+                "color: #e1e1e6; font-size: 13px; font-weight: bold; font-family: 'Segoe UI';")
+        else:
+            self.setStyleSheet("""
+                QMainWindow { background-color: #f3f4f6; }
+                QMenuBar { background-color: #ffffff; color: #1f2937; font-family: 'Segoe UI'; border-bottom: 1px solid #e5e7eb; }
+                QMenuBar::item:selected { background-color: #f3f4f6; color: #2563eb; }
+                QMenu { background-color: #ffffff; color: #1f2937; border: 1px solid #e5e7eb; }
+                QMenu::item:selected { background-color: #2563eb; color: #ffffff; }
+                QStatusBar { background-color: #ffffff; color: #6b7280; font-size: 11px; border-top: 1px solid #e5e7eb; }
+            """)
+            self.label.setStyleSheet("""
+                QLabel { background-color: #ffffff; border: 2px solid #e5e7eb; border-radius: 12px;
+                         font-size: 22px; font-weight: bold; color: #2563eb; min-height: 80px; font-family: 'Segoe UI'; }
+            """)
+            # Стиль для строки ввода в СВЕТЛОЙ теме
+            self.name_input.setStyleSheet("""
+                QLineEdit { background-color: #ffffff; color: #1f2937; border: 2px solid #e5e7eb; 
+                            border-radius: 8px; padding: 8px; font-size: 15px; font-family: 'Segoe UI'; }
+                QLineEdit:focus { border: 2px solid #2563eb; }
+            """)
+            self.btn.setStyleSheet("""
+                QPushButton { background-color: #2563eb; color: #ffffff; border: none; border-radius: 10px;
+                             font-size: 16px; font-weight: bold; min-height: 50px; font-family: 'Segoe UI'; }
+                QPushButton:hover { background-color: #1d4ed8; }
+                QPushButton:pressed { background-color: #1e40af; }
+            """)
+            self.theme_switch.setStyleSheet("""
+                QCheckBox::indicator { width: 44px; height: 24px; }
+                QCheckBox::indicator:unchecked { image: url(''); background-color: #d1d5db; border-radius: 12px; border: 1px solid #9ca3af; }
+                QCheckBox::indicator:checked { image: url(''); background-color: #2563eb; border-radius: 12px; border: 1px solid #1d4ed8; }
+            """)
+            self.switch_label.setStyleSheet(
+                "color: #1f2937; font-size: 13px; font-weight: bold; font-family: 'Segoe UI';")
+
+    def show_about_dialog(self):
+        """Всплывающее окно для пункта меню 'О программе'"""
+        QMessageBox.about(
+            self,
+            "О программе",
+            "Industrial Hello World Application\n\nВерсия 4.0\nДобавлено интерактивное поле генерации имени."
+        )
+
+
+if __name__ == "__main__":
+    app = QApplication(sys.argv)
+    window = MainWindow()
+    window.show()
+    sys.exit(app.exec())
