@@ -1,188 +1,234 @@
 import sys
-from PyQt6.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout,
-                             QLabel, QPushButton, QMessageBox, QCheckBox, QHBoxLayout, QLineEdit)
+from PyQt6.QtWidgets import (
+    QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
+    QLabel, QPushButton, QLineEdit, QStatusBar, QMessageBox, QCheckBox
+)
 from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QAction
 
 
-class MainWindow(QMainWindow):
+class IndustrialApp(QMainWindow):
     def __init__(self):
         super().__init__()
 
-        # Флаги состояний
-        self.is_dark_theme = True  # По умолчанию стоит темная тема
-
-        # Настройки главного окна
+        # Настройка главного окна
         self.setWindowTitle("Industrial Hello World Application")
-        self.resize(450, 460)
+        self.resize(550, 480)
+        
+        # Переменная для отслеживания темы (False - Белая, True - Черная)
+        self.is_dark_theme = False
 
-        # Создаем центральный виджет и вертикальный слой
-        central_widget = QWidget()
-        self.setCentralWidget(central_widget)
+        # Центральный виджет и главный контейнер
+        self.central_widget = QWidget()
+        self.setCentralWidget(self.central_widget)
 
-        self.main_layout = QVBoxLayout(central_widget)
-        self.main_layout.setContentsMargins(30, 30, 30, 20)
-        self.main_layout.setSpacing(15)
+        # Создание меню
+        self.init_menu()
 
-        # 1. Текстовое поле (Информационное табло)
-        self.label = QLabel("Введите имя ниже")
+        # Главный вертикальный лейаут
+        layout = QVBoxLayout(self.central_widget)
+        layout.setContentsMargins(40, 25, 40, 25)
+        layout.setSpacing(15)
+
+        # --- Блок тумблера переключения темы ---
+        theme_layout = QHBoxLayout()
+        theme_layout.addStretch()  # Прижимаем тумблер к правому краю
+        
+        # Используем QCheckBox, стилизованный под переключатель (Toggle Switch)
+        self.theme_toggle = QCheckBox("Тёмная тема")
+        self.theme_toggle.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.theme_toggle.toggled.connect(self.toggle_theme)
+        theme_layout.addWidget(self.theme_toggle)
+        
+        layout.addLayout(theme_layout)
+        # ----------------------------------------
+
+        # 1. Текстовое поле для вывода приветствия
+        self.label = QLabel("Привет, Мир")
         self.label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self.main_layout.addWidget(self.label)
+        layout.addWidget(self.label)
 
-        # 2. Строчка для ввода имени (Новый элемент)
+        # 2. Поле ввода имени
         self.name_input = QLineEdit()
         self.name_input.setPlaceholderText("Введите ваше имя здесь...")
-        self.name_input.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self.main_layout.addWidget(self.name_input)
+        self.name_input.returnPressed.connect(self.show_greeting)
+        layout.addWidget(self.name_input)
 
-        # 3. Кнопка "Сгенерировать приветствие"
-        self.btn = QPushButton("Сгенерировать приветствие")
-        self.btn.setCursor(Qt.CursorShape.PointingHandCursor)
-        self.btn.clicked.connect(self.generate_greeting)  # Подключаем к новой функции
-        self.main_layout.addWidget(self.btn)
+        # 3. Синяя кнопка "Показать приветствие"
+        self.btn_greet = QPushButton("Показать приветствие")
+        self.btn_greet.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.btn_greet.clicked.connect(self.show_greeting)
+        layout.addWidget(self.btn_greet)
 
-        # 4. Блок с тумблером смены темы в правом нижнем углу
-        bottom_layout = QHBoxLayout()
-        bottom_layout.addStretch()
+        # Добавляем пустой промежуток снизу
+        layout.addStretch()
 
-        self.theme_switch = QCheckBox()
-        self.theme_switch.setCursor(Qt.CursorShape.PointingHandCursor)
-        self.theme_switch.stateChanged.connect(self.change_theme)
+        # Статусбар снизу окна
+        self.status_bar = QStatusBar()
+        self.setStatusBar(self.status_bar)
+        self.status_bar.showMessage("Приложение готово к работе")
 
-        self.switch_label = QLabel("Тёмная тема")
-        self.switch_label.setStyleSheet("font-size: 13px; font-weight: bold; font-family: 'Segoe UI';")
-
-        bottom_layout.addWidget(self.switch_label)
-        bottom_layout.addWidget(self.theme_switch)
-        self.main_layout.addLayout(bottom_layout)
-
-        # Инициализация меню и стилей
-        self.init_menu()
+        # Применяем начальные стили (Светлая тема)
         self.apply_theme_styles()
-        self.statusBar().showMessage("Приложение готово к работе")
 
     def init_menu(self):
-        """Создание верхнего меню"""
+        """Инициализация верхнего меню приложения."""
         menu_bar = self.menuBar()
 
-        # Меню Файл
+        # Меню "Файл"
         file_menu = menu_bar.addMenu("Файл")
+        
+        clear_action = QAction("Очистить всё", self)
+        clear_action.setStatusTip("Сбросить текст и имя")
+        clear_action.triggered.connect(self.reset_fields)
+        file_menu.addAction(clear_action)
+        
+        file_menu.addSeparator()
+        
         exit_action = QAction("Выход", self)
         exit_action.setStatusTip("Закрыть приложение")
         exit_action.triggered.connect(self.close)
         file_menu.addAction(exit_action)
 
-        # Меню Помощь
+        # Меню "Помощь"
         help_menu = menu_bar.addMenu("Помощь")
+        
+        instruction_action = QAction("Инструкция", self)
+        instruction_action.triggered.connect(self.show_instruction)
+        help_menu.addAction(instruction_action)
+        
         about_action = QAction("О программе", self)
-        about_action.setStatusTip("Показать информацию о программе")
         about_action.triggered.connect(self.show_about_dialog)
         help_menu.addAction(about_action)
 
-    def generate_greeting(self):
-        """Функция генерации текста на основе ввода пользователя"""
-        # Получаем текст из строки ввода и убираем лишние пробелы по краям
-        user_name = self.name_input.text().strip()
-
-        if user_name:
-            # Если имя введено — генерируем красивое приветствие
-            self.label.setText(f"Привет, {user_name}!")
-            self.statusBar().showMessage(f"Сгенерировано приветствие для {user_name}")
+    def show_greeting(self):
+        """Вывод приветствия с введенным именем."""
+        name = self.name_input.text().strip()
+        if name:
+            text = f"Привет, {name}!"
+            self.status_bar.showMessage(f"Выведено приветствие для: {name}")
         else:
-            # Если поле пустое — выводим дефолтный текст
-            self.label.setText("Musor Drop")
-            self.statusBar().showMessage("Поле ввода пустое. Выведен стандартный текст")
+            text = "Привет, Мир"
+            self.status_bar.showMessage("Имя не введено. Выведено стандартное приветствие.")
+        
+        self.label.setText(text)
 
-    def change_theme(self, state):
-        """Слушатель переключателя тем"""
-        if state == 2:  # Checked
-            self.is_dark_theme = False
-            self.switch_label.setText("Светлая тема")
-        else:
-            self.is_dark_theme = True
-            self.switch_label.setText("Тёмная тема")
-
+    def toggle_theme(self, checked):
+        """Слот для переключения флага темы и обновления стилей."""
+        self.is_dark_theme = checked
         self.apply_theme_styles()
-        self.statusBar().showMessage("Тема оформления успешно изменена")
+        theme_name = "Тёмная" if checked else "Светлая"
+        self.status_bar.showMessage(f"Включена {theme_name} тема")
 
-    def apply_theme_styles(self):
-        """Глобальное применение стилей для темной и светлой тем"""
-        if self.is_dark_theme:
-            self.setStyleSheet("""
-                QMainWindow { background-color: #121214; }
-                QMenuBar { background-color: #1a1a1e; color: #e1e1e6; font-family: 'Segoe UI'; }
-                QMenuBar::item:selected { background-color: #29292e; color: #00adb5; }
-                QMenu { background-color: #1a1a1e; color: #e1e1e6; border: 1px solid #29292e; }
-                QMenu::item:selected { background-color: #00adb5; color: #ffffff; }
-                QStatusBar { background-color: #1a1a1e; color: #87878d; font-size: 11px; }
-            """)
-            self.label.setStyleSheet("""
-                QLabel { background-color: #1a1a1e; border: 2px solid #29292e; border-radius: 12px;
-                         font-size: 22px; font-weight: bold; color: #00adb5; min-height: 80px; font-family: 'Segoe UI'; }
-            """)
-            # Стиль для строки ввода в ТЕМНОЙ теме
-            self.name_input.setStyleSheet("""
-                QLineEdit { background-color: #1a1a1e; color: #ffffff; border: 2px solid #29292e; 
-                            border-radius: 8px; padding: 8px; font-size: 15px; font-family: 'Segoe UI'; }
-                QLineEdit:focus { border: 2px solid #00adb5; }
-            """)
-            self.btn.setStyleSheet("""
-                QPushButton { background-color: #00adb5; color: #ffffff; border: none; border-radius: 10px;
-                             font-size: 16px; font-weight: bold; min-height: 50px; font-family: 'Segoe UI'; }
-                QPushButton:hover { background-color: #00f5ff; color: #121214; }
-                QPushButton:pressed { background-color: #008c95; }
-            """)
-            self.theme_switch.setStyleSheet("""
-                QCheckBox::indicator { width: 44px; height: 24px; }
-                QCheckBox::indicator:unchecked { image: url(''); background-color: #29292e; border-radius: 12px; border: 2px solid #3e3e44; }
-                QCheckBox::indicator:checked { image: url(''); background-color: #00adb5; border-radius: 12px; border: 2px solid #00f5ff; }
-            """)
-            self.switch_label.setStyleSheet(
-                "color: #e1e1e6; font-size: 13px; font-weight: bold; font-family: 'Segoe UI';")
-        else:
-            self.setStyleSheet("""
-                QMainWindow { background-color: #f3f4f6; }
-                QMenuBar { background-color: #ffffff; color: #1f2937; font-family: 'Segoe UI'; border-bottom: 1px solid #e5e7eb; }
-                QMenuBar::item:selected { background-color: #f3f4f6; color: #2563eb; }
-                QMenu { background-color: #ffffff; color: #1f2937; border: 1px solid #e5e7eb; }
-                QMenu::item:selected { background-color: #2563eb; color: #ffffff; }
-                QStatusBar { background-color: #ffffff; color: #6b7280; font-size: 11px; border-top: 1px solid #e5e7eb; }
-            """)
-            self.label.setStyleSheet("""
-                QLabel { background-color: #ffffff; border: 2px solid #e5e7eb; border-radius: 12px;
-                         font-size: 22px; font-weight: bold; color: #2563eb; min-height: 80px; font-family: 'Segoe UI'; }
-            """)
-            # Стиль для строки ввода в СВЕТЛОЙ теме
-            self.name_input.setStyleSheet("""
-                QLineEdit { background-color: #ffffff; color: #1f2937; border: 2px solid #e5e7eb; 
-                            border-radius: 8px; padding: 8px; font-size: 15px; font-family: 'Segoe UI'; }
-                QLineEdit:focus { border: 2px solid #2563eb; }
-            """)
-            self.btn.setStyleSheet("""
-                QPushButton { background-color: #2563eb; color: #ffffff; border: none; border-radius: 10px;
-                             font-size: 16px; font-weight: bold; min-height: 50px; font-family: 'Segoe UI'; }
-                QPushButton:hover { background-color: #1d4ed8; }
-                QPushButton:pressed { background-color: #1e40af; }
-            """)
-            self.theme_switch.setStyleSheet("""
-                QCheckBox::indicator { width: 44px; height: 24px; }
-                QCheckBox::indicator:unchecked { image: url(''); background-color: #d1d5db; border-radius: 12px; border: 1px solid #9ca3af; }
-                QCheckBox::indicator:checked { image: url(''); background-color: #2563eb; border-radius: 12px; border: 1px solid #1d4ed8; }
-            """)
-            self.switch_label.setStyleSheet(
-                "color: #1f2937; font-size: 13px; font-weight: bold; font-family: 'Segoe UI';")
+    def reset_fields(self):
+        """Сброс полей к исходному состоянию (тема при этом сохраняется)."""
+        self.name_input.clear()
+        self.label.setText("Привет, Мир")
+        self.status_bar.showMessage("Поля ввода успешно сброшены")
+
+    def show_instruction(self):
+        """Показ инструкции пользователя."""
+        QMessageBox.information(
+            self,
+            "Инструкция",
+            "Как пользоваться приложением:\n\n"
+            "1. Введите имя в текстовое поле.\n"
+            "2. Нажмите кнопку 'Показать приветствие' или клавишу Enter.\n"
+            "3. Используйте небольшой тумблер вверху справа для переключения между Белой и Чёрной темой.\n"
+            "4. Меню 'Файл' позволяет сбросить текст или закрыть программу."
+        )
 
     def show_about_dialog(self):
-        """Всплывающее окно для пункта меню 'О программе'"""
+        """Показ окна 'О программе'."""
         QMessageBox.about(
             self,
             "О программе",
-            "Industrial Hello World Application\n\nВерсия 4.0\nДобавлено интерактивное поле генерации имени."
+            "Industrial Hello World Application\n"
+            "Версия: 3.0\n"
+            "Язык: Python (PyQt6)\n\n"
+            "Добавлен тумблер переключения Белой/Чёрной темы."
         )
+
+    def apply_theme_styles(self):
+        """Централизованное управление CSS-стилями элементов в зависимости от темы."""
+        if self.is_dark_theme:
+            # --- ПАЛИТРА ДЛЯ ЧЁРНОЙ ТЕМЫ ---
+            bg_window = "#121212"
+            bg_label = "#1e1e1e"
+            border_label = "#3a3a3a"
+            text_main = "#ffffff"
+            bg_input = "#2c2c2c"
+            border_input = "#444444"
+            text_input = "#ffffff"
+            bg_menu = "#1e1e1e"
+            text_menu = "#ffffff"
+        else:
+            # --- ПАЛИТРА ДЛЯ БЕЛОЙ ТЕМЫ ---
+            bg_window = "#ffffff"
+            bg_label = "#f0f4f8"
+            border_label = "#6ba4e8"
+            text_main = "#2c3e50"
+            bg_input = "#ffffff"
+            border_input = "#bdc3c7"
+            text_input = "#2c3e50"
+            bg_menu = "#ffffff"
+            text_menu = "#000000"
+
+        # Применение стилей к элементам
+        self.central_widget.setStyleSheet(f"background-color: {bg_window};")
+        self.menuBar().setStyleSheet(f"background-color: {bg_menu}; color: {text_menu};")
+        
+        self.theme_toggle.setStyleSheet(f"color: {text_main}; font-size: 14px; font-weight: bold;")
+        
+        self.label.setStyleSheet(f"""
+            QLabel {{
+                background-color: {bg_label};
+                border: 2px solid {border_label};
+                border-radius: 12px;
+                color: {text_main};
+                font-size: 26px;
+                font-weight: bold;
+                min-height: 80px;
+            }}
+        """)
+        
+        self.name_input.setStyleSheet(f"""
+            QLineEdit {{
+                border: 2px solid {border_input};
+                border-radius: 8px;
+                padding: 10px;
+                font-size: 16px;
+                background-color: {bg_input};
+                color: {text_input};
+            }}
+            QLineEdit:focus {{
+                border: 2px solid #2a8ad4;
+            }}
+        """)
+        
+        self.btn_greet.setStyleSheet("""
+            QPushButton {
+                background-color: #2a8ad4;
+                color: white;
+                border: none;
+                border-radius: 8px;
+                font-size: 16px;
+                font-weight: bold;
+                min-height: 50px;
+            }
+            QPushButton:hover {
+                background-color: #2375b3;
+            }
+            QPushButton:pressed {
+                background-color: #1b5b8c;
+            }
+        """)
+        
+        self.status_bar.setStyleSheet(f"background-color: {bg_label}; color: {text_main}; font-size: 13px;")
 
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
-    window = MainWindow()
+    window = IndustrialApp()
     window.show()
     sys.exit(app.exec())
